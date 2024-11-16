@@ -7,6 +7,7 @@ use crate::{
     constants::*,
     ports::*,
     usart::*,
+    registers::*,
     commands::B15FCommand,
     command_buffer,
     error,
@@ -79,7 +80,7 @@ impl B15F {
 
     fn discard(&mut self) {
         self.port.clear(serialport::ClearBuffer::Output).expect("Couldn't clear output buffer!");
-        
+
         for _ in 0..16 {
             self.port.write(command_buffer![B15FCommand::Discard]).expect("Couldn't write to port!");
             thread::sleep(Duration::from_millis(4));
@@ -91,9 +92,14 @@ impl B15F {
     fn test_connection(&mut self) -> bool {
         let dummy: u8 = rand::thread_rng().gen_range(0x00..=0xFF);
 
-        self.port.write(command_buffer![B15FCommand::Test, dummy]).expect("Failed to write to port!");
+        self.port.write(command_buffer![
+            B15FCommand::Test, 
+            dummy
+        ]).expect("Failed to write to port!");
+        
         let mut buffer: [u8; 2] = [0;2];
         self.port.read(&mut buffer).expect("Couldn't write to buffer!");
+        
         if buffer[0] != OK || buffer[1] != dummy {
             return false;
         }
@@ -123,19 +129,37 @@ impl B15F {
             B15FPort::Port1 => B15FCommand::DigitalWrite1,
         };
 
-        self.port.write(command_buffer![command, reversed]).expect("Couldn't write to port!");
-        let response = read_sized::<1>(&mut self.port).expect("Couldn't read answer!");
+        self.port.write(command_buffer![
+            command, 
+            reversed
+        ]).expect("Couldn't write to port!");
+        
+        let response = read_sized::<1>(&mut self.port).expect("Couldn't read response!");
         if response[0] != OK {
             error!("Digital write to port {:?} failed!", port);
         }
+    }
+
+    pub fn digital_read(&mut self, port: B15FPort) -> u8 {
+        self.port.clear(serialport::ClearBuffer::Input).expect("Couldn't clear input buffer!");
+ 
+        let command = match port {
+            B15FPort::Port0 => B15FCommand::DigitalRead0,
+            B15FPort::Port1 => B15FCommand::DigitalRead1,
+        };
+
+        self.port.write(command_buffer![command]).expect("Couldn't write to port!");
+
+        let response = read_sized::<1>(&mut self.port).expect("Couldn't read response!");
+        response[0].reverse_bits()
     }
 
     pub fn read_dip_switch(&mut self) -> u8 {
         self.port.clear(serialport::ClearBuffer::Input).expect("Couldn't clear input buffer!");
         self.port.write(command_buffer![B15FCommand::ReadDipSwitch]).expect("Failed to write to port!");
 
-        let answer = read_sized::<1>(&mut self.port).expect("Couldn't read from port!");
-        answer[0].reverse_bits()
+        let response = read_sized::<1>(&mut self.port).expect("Couldn't read response!");
+        response[0].reverse_bits()
     }
 
     pub fn analog_write(&mut self, port: B15FPort, value: u16) {
@@ -143,11 +167,57 @@ impl B15F {
             B15FPort::Port0 => B15FCommand::AnalogWrite0,
             B15FPort::Port1 => B15FCommand::AnalogWrite1,
         };
-        self.port.write(command_buffer![command, value & 0xFF, value >> (8 as u8)]).expect("Failed to write to port!");
+
+        self.port.write(command_buffer![
+            command, 
+            value & 0xFF, 
+            value >> (8 as u8)
+        ]).expect("Failed to write to port!");
 
         let response = read_sized::<1>(&mut self.port).expect("Couldn't get a response!");
         if response[0] != OK {
             error!("Analog write to port {:?} failed!", port);
         }
+    }
+
+    pub fn analog_read(&mut self, channel: u8) -> u16 {
+        assert!(channel <= 7, "Channel number should be in the range of 0..7. Given channel: {}", channel);
+
+        self.port.clear(serialport::ClearBuffer::Input).expect("Couldn't clear input buffer!");
+        self.port.write(command_buffer![
+            B15FCommand::AnalogRead, 
+            channel
+        ]).expect("Failed to write to port!");
+
+        let mut buffer: [u8;2] = [0;2];
+        self.port.read(&mut buffer).expect("Couldn't read buffer!");
+
+        let response = u16::from_le_bytes(buffer);
+
+        if response > 1023 {
+            error!("Bad ADC data!");
+        }
+        
+        response
+    }
+
+    fn set_mem8(&mut self, address: u8, value: u8) {
+        self.port.clear(serialport::ClearBuffer::Input).expect("Couldn't clear input buffer!");
+        self.port.write(command_buffer![
+            B15FCommand::SetMem8, 
+            ((address) & 0xFF) as u8, 
+            ((address as usize) >> 8) as u8, 
+            value
+        ]).expect("Failed to write to port!");
+
+        let response = read_sized::<1>(&mut self.port).expect("Couldn't get a response!");
+        if response[0] != OK {
+            error!("Bad value!");
+        }
+    }
+
+    pub fn set_register<R: InRegister>(&mut self, register: R, value: u8) {
+        let address = register.address();
+        self.set_mem8(address, value);
     }
 }
