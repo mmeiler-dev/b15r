@@ -5,7 +5,7 @@ pub mod ports;
 mod usart;
 mod log;
 pub mod registers;
-
+pub mod channels;
 
 pub use b15f::B15F;
 pub use ports::{
@@ -16,6 +16,16 @@ pub use registers::{
     DdrPin,
     PortPin,
     PinPin
+};
+pub use channels::{
+    AnalogChannel::Channel0,
+    AnalogChannel::Channel1,
+    AnalogChannel::Channel2,
+    AnalogChannel::Channel3,
+    AnalogChannel::Channel4,
+    AnalogChannel::Channel5,
+    AnalogChannel::Channel6,
+    AnalogChannel::Channel7,
 };
 
 /*pub mod prelude {

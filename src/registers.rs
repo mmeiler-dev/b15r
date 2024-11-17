@@ -47,19 +47,19 @@ pub enum PinPin {
     PINA7 = 7,
 }
 
-impl InRegister for DdrPin {
+impl OutRegister for DdrPin {
     fn address(&self) -> u8 {
         self.clone() as u8
     }
 }
 
-impl InRegister for PortPin {
+impl OutRegister for PortPin {
     fn address(&self) -> u8 {
         self.clone() as u8
     }
 }
 
-impl OutRegister for PinPin {
+impl InRegister for PinPin {
     fn address(&self) -> u8 {
         self.clone() as u8
     }

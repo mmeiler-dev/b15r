@@ -26,10 +26,13 @@ pub enum B15FCommand {
     AnalogWrite0    = 10,
     AnalogWrite1    = 11,
     AnalogRead      = 12,
+    PwmSetFreq      = 14,
+    PwmSetValue     = 15,
     SetMem8         = 16,
     GetMem8         = 17,
     SetMem16        = 18,
     GetMem16        = 19,
+    CounterOffset   = 20,
     ServoEnable     = 21,
     ServoDisable    = 22,
     ServoSetPos     = 23
