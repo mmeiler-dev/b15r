@@ -20,7 +20,7 @@ b15r = { path = "/relative/path/to/the/cloned/repo/" }
 ## Benutzung
 
 ```rust
-use b15r::b15f::B15F;
+use b15r::B15F;
 
 fn main() {
   let mut drv = B15F::get_instance(); // Erstellt die Verbindung zum B15F
