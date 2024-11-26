@@ -28,7 +28,7 @@ impl B15F {
         };
 
         let mut tries = 3;
-        while tries > 0 {
+        /*while tries > 0 {
             drv.discard();
 
             match drv.test_connection() {
@@ -37,7 +37,7 @@ impl B15F {
             }
 
             tries -= 1;
-        }
+        }*/
 
         info!("Connection to B15F established!");
         //info!("{}", drv.board_info())
@@ -204,13 +204,13 @@ impl B15F {
         self.port.clear(serialport::ClearBuffer::Input).expect("Couldn't clear input buffer!");
         self.port.write(command_buffer![
             B15FCommand::SetMem8, 
-            (address & 0xFF) as u8, 
+            ((address as usize) & 0xFF) as u8, 
             ((address as usize) >> 8) as u8, 
             value
         ]).expect("Failed to write to port!");
 
         let response = read_sized::<1>(&mut self.port).expect("Couldn't get a response!");
-        if response[0] != OK {
+        if response[0] != value {
             error!("Bad value!");
         }
     }
